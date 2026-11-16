@@ -1,0 +1,7 @@
+# Local setup. Step 4: only the message broker runs in Docker.
+services:
+  rabbitmq:
+    image: rabbitmq:4-management
+    ports:
+      - "5672:5672"     # apps connect here
+      - "15672:15672"   # web console: http://localhost:15672 (guest / guest)
