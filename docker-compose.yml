@@ -1,7 +1,45 @@
-# Local setup. Step 4: only the message broker runs in Docker.
+# The whole store on one machine: docker compose up --build
 services:
   rabbitmq:
     image: rabbitmq:4-management
     ports:
       - "5672:5672"     # apps connect here
       - "15672:15672"   # web console: http://localhost:15672 (guest / guest)
+
+  product:
+    build: ./product
+    ports:
+      - "8080:8080"
+
+  product-bad:
+    build: ./product
+    environment:
+      FAILURE_RATE: "0.5"
+    ports:
+      - "8090:8080"
+
+  credit-card:
+    build: ./credit-card
+    ports:
+      - "8082:8082"
+
+  shopping-cart:
+    build: ./shopping-cart
+    environment:
+      CCA_URL: http://credit-card:8082
+      RABBITMQ_HOST: rabbitmq
+    ports:
+      - "8081:8081"
+    depends_on:
+      - rabbitmq
+      - credit-card
+    restart: on-failure   # rabbitmq needs a few seconds before it accepts connections
+
+  warehouse:
+    build: ./warehouse
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      WAREHOUSE_THREADS: "16"
+    depends_on:
+      - rabbitmq
+    restart: on-failure

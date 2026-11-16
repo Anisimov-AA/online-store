@@ -14,4 +14,4 @@ COPY --from=builder /app/target/*.jar app.jar
 RUN chown -R spring:spring /app
 USER spring
 ENV JAVA_OPTS="-Xmx512m -Xms256m"
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/app.jar"]
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar"]
