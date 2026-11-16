@@ -1,6 +1,6 @@
 # One image repository per program. The bad Product uses the product image with FAILURE_RATE=0.5.
 locals {
-  images = ["product", "credit-card", "shopping-cart", "warehouse"]
+  images = ["product", "credit-card", "shopping-cart", "warehouse", "load-client"]
 }
 
 resource "aws_ecr_repository" "app" {

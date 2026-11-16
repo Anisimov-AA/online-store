@@ -9,7 +9,11 @@ REGISTRY="$(aws sts get-caller-identity --query Account --output text).dkr.ecr.$
 
 aws ecr get-login-password --region "$REGION" | docker login --username AWS --password-stdin "$REGISTRY"
 
-for name in product credit-card shopping-cart warehouse; do
+# push only the images named as arguments, or all of them
+names=("$@")
+[ ${#names[@]} -eq 0 ] && names=(product credit-card shopping-cart warehouse load-client)
+
+for name in "${names[@]}"; do
   image="${REGISTRY}/online-store/${name}:latest"
   echo "=== ${name} → ${image}"
   docker build -t "$image" "${ROOT}/${name}"
