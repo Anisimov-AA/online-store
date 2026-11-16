@@ -3,6 +3,7 @@ package com.onlinestore.cart;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -85,6 +86,12 @@ public class CartController {
             return error(HttpStatus.INTERNAL_SERVER_ERROR, "could not send order to warehouse");
         }
         return ResponseEntity.ok(Map.of("order_id", orderId));
+    }
+
+    /** Load balancer health check. */
+    @GetMapping("/health")
+    public ResponseEntity<String> health() {
+        return ResponseEntity.ok("OK");
     }
 
     private static ResponseEntity<Map<String, Object>> error(HttpStatus status, String message) {

@@ -81,26 +81,38 @@ resource "aws_ecs_service" "http" {
 
 # ---------- RabbitMQ ----------
 
-# Private DNS so the cart and the warehouse can find the broker as rabbitmq.store.local
-resource "aws_service_discovery_private_dns_namespace" "internal" {
-  name = "store.local"
-  vpc  = data.aws_vpc.default.id
+# Learner Lab does not allow Cloud Map (private DNS), so the broker gets a fixed address
+# from an internal Network Load Balancer. The cart and the warehouse connect to its DNS name.
+resource "aws_lb" "rabbitmq" {
+  name               = "${var.project}-mq"
+  load_balancer_type = "network"
+  internal           = true
+  subnets            = data.aws_subnets.default.ids
 }
 
-resource "aws_service_discovery_service" "rabbitmq" {
-  name = "rabbitmq"
+resource "aws_lb_target_group" "rabbitmq" {
+  name        = "${var.project}-mq"
+  port        = 5672
+  protocol    = "TCP"
+  target_type = "ip"
+  vpc_id      = data.aws_vpc.default.id
 
-  dns_config {
-    namespace_id = aws_service_discovery_private_dns_namespace.internal.id
-    dns_records {
-      type = "A"
-      ttl  = 10
-    }
+  deregistration_delay = 10
+}
+
+resource "aws_lb_listener" "rabbitmq" {
+  load_balancer_arn = aws_lb.rabbitmq.arn
+  port              = 5672
+  protocol          = "TCP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.rabbitmq.arn
   }
 }
 
 locals {
-  rabbitmq_host = "rabbitmq.${aws_service_discovery_private_dns_namespace.internal.name}"
+  rabbitmq_host = aws_lb.rabbitmq.dns_name
 }
 
 resource "aws_ecs_task_definition" "rabbitmq" {
@@ -136,9 +148,13 @@ resource "aws_ecs_service" "rabbitmq" {
     assign_public_ip = true
   }
 
-  service_registries {
-    registry_arn = aws_service_discovery_service.rabbitmq.arn
+  load_balancer {
+    target_group_arn = aws_lb_target_group.rabbitmq.arn
+    container_name   = "rabbitmq"
+    container_port   = 5672
   }
+
+  depends_on = [aws_lb_listener.rabbitmq]
 }
 
 # ---------- Warehouse ----------
