@@ -14,4 +14,4 @@ COPY --from=builder /app/target/load-client.jar app.jar
 RUN chown -R app:app /app
 USER app
 ENV JAVA_OPTS="-Xmx1g"
-ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar"]
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar \"$@\"", "--"]

@@ -8,7 +8,7 @@ MODE="${1:?mode: product or checkout}"
 THREADS="${2:?threads}"
 TOTAL="${3:-200000}"
 
-TF="$(cd "$(dirname "$0")/terraform" && pwd)"
+TF="$(cd "$(dirname "$0")/terraform" && (pwd -W 2>/dev/null || pwd))" # Windows path for terraform.exe
 ALB_URL="$(terraform -chdir="$TF" output -raw alb_url)"
 NETWORK="$(terraform -chdir="$TF" output -raw load_client_network)"
 CLUSTER="$(terraform -chdir="$TF" output -raw cluster_name)"
