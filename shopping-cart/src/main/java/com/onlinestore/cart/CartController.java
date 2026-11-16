@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -23,9 +24,11 @@ public class CartController {
     private final AtomicInteger nextCartId = new AtomicInteger(1);
     private final AtomicInteger nextOrderId = new AtomicInteger(1);
     private final CreditCardClient creditCard;
+    private final OrderPublisher orders;
 
-    public CartController(CreditCardClient creditCard) {
+    public CartController(CreditCardClient creditCard, OrderPublisher orders) {
         this.creditCard = creditCard;
+        this.orders = orders;
     }
 
     @PostMapping("/shopping-cart")
@@ -72,8 +75,15 @@ public class CartController {
             return error(HttpStatus.INTERNAL_SERVER_ERROR, "credit card service answered " + ccaStatus);
         }
 
-        // TODO step 4: send the order to the warehouse through RabbitMQ
         int orderId = nextOrderId.getAndIncrement();
+        List<OrderMessage.Item> items = cart.getItems().entrySet().stream()
+                .map(e -> new OrderMessage.Item(e.getKey(), e.getValue()))
+                .toList();
+        try {
+            orders.publish(new OrderMessage(orderId, cartId, items));
+        } catch (Exception e) {
+            return error(HttpStatus.INTERNAL_SERVER_ERROR, "could not send order to warehouse");
+        }
         return ResponseEntity.ok(Map.of("order_id", orderId));
     }
 
