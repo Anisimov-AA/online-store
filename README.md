@@ -5,6 +5,29 @@ A customer's checkout goes through an Application Load Balancer to the Shopping 
 
 **Group members:** Aleksei Anisimov
 
+## Results
+
+All tests ran on AWS (us-west-2) with the load client inside AWS, against the ALB.
+
+- **200,000 checkouts, 0 failed, 0 lost orders.** Best run: 704 req/s with 32 client threads. The Warehouse totals matched the authorized checkouts exactly in every run (719,930 orders over four runs, then 180,009 and 180,209).
+- **RabbitMQ queue stayed flat and near zero:** at most 9 messages waiting, for every setup from 32 to 256 client threads and 1 to 16 Warehouse threads.
+- **ATW moved traffic away from the failing instance.** One of three Product tasks returns 503 for half of the requests. Without ATW it would get about 33% of the traffic; with ATW it got 10.7% (each healthy task got 44.7%). Over 300,000 requests at 2,224 req/s the client saw 0 failed requests.
+
+| Client threads | Warehouse threads | Throughput | Failed | Max queue |
+|---|---|---|---|---|
+| 32 | 16 | 695 req/s | 0 | 3 |
+| 64 | 16 | 615 req/s | 0 | 3 |
+| 128 | 16 | 674 req/s | 0 | 9 |
+| 256 | 16 | 664 req/s | 0 | 7 |
+| 32 | 4 | 704 req/s | 0 | 5 |
+| 32 | 1 | 704 req/s | 0 | 3 |
+
+More client threads did not help: the single Shopping Cart task is the limit, because every checkout waits for the card authorizer and for the RabbitMQ publisher confirm. One Warehouse thread is already enough at this rate.
+
+| Requests per Product task (blue: each healthy task, orange: failing task) | RabbitMQ queue during all six runs |
+|---|---|
+| ![ATW traffic](docs/atw-traffic.png) | ![RabbitMQ queue](docs/rabbitmq-queue.png) |
+
 ## How a checkout works
 
 ```
